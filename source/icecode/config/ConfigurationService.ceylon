@@ -20,6 +20,7 @@ import ceylon.logging {
 Logger log = logger(`module icecode.config`);
 
 doc("A service for getting properties from a backing source.")
+by("Mark Lester")
 shared interface ConfigurationService {
 	
 	doc("get a value from the config service with the given type")
@@ -32,24 +33,28 @@ shared interface ConfigurationService {
 shared class BasicConfigurationService({<String->String>*} entries = {}) satisfies ConfigurationService {
 	value map = TreeMap<String,String>((String x, String y) => x <=> y,entries);
 	
+	value propertyParsers = { PropertyConverter((String propVal) => propVal), PropertyConverter(parseInteger), PropertyConverter(parseDateTime) };
+	
 	shared actual T? getValueAs<T>(String key) {
  		value mval = map[key];
 		if(exists mval){
-			if (is T val = mval) {
-				return val;
-			}
-			if(is T val = parseInteger(mval)){
-				return val;
-			}
-			if(is T val = parseDateTime(mval)){
-				return val;
+			for(value convert in propertyParsers){
+				if(is T val = convert.parse(mval)){
+					return val;
+				}
 			}
 		}
 		return null;
 	}
 	shared actual Map<String,String> getSnapshot() => map.clone();
 }
-
+doc("information to convert a property to the given form")
+by("Mark Lester")
+class PropertyConverter<T>(Callable<T, [String]> parserFn){
+	shared T parse(String propVal){
+		return parserFn(propVal);
+	}
+}
 shared ConfigurationService? createFromFile(Path path){
 	if(is File file =path.resource){
 		value props = { for (line in lines(file)) if (exists prop = parseProp(line)) prop[0]->prop[1] };
