@@ -8,8 +8,14 @@ import ceylon.test {
 	assertNotNull
 }
 import ceylon.time {
-	DateTime,
-	now
+	now,
+	DateTime
+}
+
+import icecode.config {
+	BasicConfigurationService,
+	createFromFile,
+	parseProp
 }
 class ConfigurationServiceTests(){
 	test
