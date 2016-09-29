@@ -15,30 +15,50 @@ import ceylon.time {
 import icecode.config {
   BasicConfigurationService,
   createFromFile,
-  parseProp
+  parseProp,
+  stringConverter,
+  Key,
+  integerConverter
 }
 
 class ConfigurationServiceTests() {
   test
   shared void testGetValueAsString() {
-    value x = BasicConfigurationService({ "string"->"value" });
-    assertEquals(x.getValueAs<String>("string"), "value");
-    assertNull(x.getValueAs<String>("nothere"));
+    value configService = BasicConfigurationService({ "string"->"value" });
+    assertEquals(configService.getValueAs<String>("string"), "value");
+    assertNull(configService.getValueAs<String>("nothere"));
   }
   
   test
   shared void testGetValueAsInteger() {
-    value x = BasicConfigurationService({ "key"->"5" });
-    assertEquals(x.getValueAs<String>("key"), "5");
-    assertEquals(x.getValueAs<Integer>("key"), 5);
+    value configService = BasicConfigurationService({ "key"->"5" });
+    assertEquals(configService.getValueAs<String>("key"), "5");
+    assertEquals(configService.getValueAs<Integer>("key"), 5);
   }
   
   test
   shared void testGetValueAsDate() {
     value dt = now().dateTime();
-    value x = BasicConfigurationService({ "key"->dt.string });
-    assertEquals(x.getValueAs<String>("key"), dt.string);
-    assertEquals(x.getValueAs<DateTime>("key"), dt);
+    value configService = BasicConfigurationService({ "key"->dt.string });
+    assertEquals(configService.getValueAs<String>("key"), dt.string);
+    assertEquals(configService.getValueAs<DateTime>("key"), dt);
+  }
+  
+  test
+  shared void testGetWithKey(){
+    value str = "astring";
+    Key<String> key = Key("name", stringConverter);
+    Key<String> doesntExistKey = Key("dne", stringConverter);
+    Key<String> doesntExistKeyWithDefault = Key("dne_default", stringConverter,"defaultValue");
+    Key<Integer?> dneIntKey = Key("dne.int", integerConverter,5);
+    value configService = BasicConfigurationService({ key.key->str });
+    assertEquals(configService.getValue(key),str);
+    
+    assertNull(configService.getValue(doesntExistKey));
+    
+    assertEquals(configService.getValue(doesntExistKeyWithDefault),"defaultValue");
+    
+    assertEquals(configService.getValue(dneIntKey),5);
   }
   
   test
