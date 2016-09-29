@@ -6,9 +6,6 @@ import ceylon.file {
   File,
   lines
 }
-import ceylon.time.iso8601 {
-  parseDateTime
-}
 import ceylon.logging {
   logger,
   Logger
@@ -23,8 +20,12 @@ Logger log = logger(`module icecode.config`);
 doc ("A service for getting properties from a backing source.")
 by ("Mark Lester")
 shared interface ConfigurationService {
+  
   doc ("get a value from the config service with the given type")
   shared formal T? getValueAs<T>(String key);
+  
+  doc("get a value using a Key")
+  shared formal T? getValue<T>(Key<T> key);
   
   doc ("take a snapshot of the properties in the config service")
   shared formal Map<String,String> getSnapshot();
@@ -33,13 +34,13 @@ shared interface ConfigurationService {
 shared class BasicConfigurationService({<String->String>*} entries = {}) satisfies ConfigurationService {
   value map = TreeMap<String,String>((String x, String y) => x <=> y, entries);
   
-  value propertyParsers = { PropertyConverter((String propVal) => propVal), PropertyConverter(parseInteger), PropertyConverter(parseDateTime) };
+  value propertyConverters = {stringConverter,integerConverter,dateTimeConverter};
   
   shared actual T? getValueAs<T>(String key) {
     value mval = map[key];
     if (exists mval) {
-      for (value convert in propertyParsers) {
-        if (is T val = convert.parse(mval)) {
+      for (value converter in propertyConverters) {
+        if (is T val = converter.convert(mval)) {
           return val;
         }
       }
@@ -47,14 +48,17 @@ shared class BasicConfigurationService({<String->String>*} entries = {}) satisfi
     return null;
   }
   shared actual Map<String,String> getSnapshot() => map.clone();
-}
-doc ("information to convert a property to the given form")
-by ("Mark Lester")
-class PropertyConverter<T>(Callable<T,[String]> parserFn) {
-  shared T parse(String propVal) {
-    return parserFn(propVal);
+  
+  shared actual T? getValue<T>(Key<T> key){
+    value val = map[key.key];
+    if(exists val){
+      return key.converter.convert(val);
+    }
+    return key.defaultValue;
   }
+  
 }
+
 shared ConfigurationService? createFromFile(Path path) {
   if (is File file = path.resource) {
     value props = { for (line in lines(file)) if (exists prop = parseProp(line)) prop[0] -> prop[1] };
