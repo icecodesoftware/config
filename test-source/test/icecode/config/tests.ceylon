@@ -18,7 +18,15 @@ import icecode.config {
   parseProp,
   stringConverter,
   Key,
-  integerConverter
+  integerConverter,
+  Listener,
+  ChangeType,
+  added,
+  changed,
+  removed
+}
+import ceylon.collection {
+  ArrayList
 }
 
 class ConfigurationServiceTests() {
@@ -49,8 +57,9 @@ class ConfigurationServiceTests() {
     value str = "astring";
     Key<String> key = Key("name", stringConverter);
     Key<String> doesntExistKey = Key("dne", stringConverter);
-    Key<String> doesntExistKeyWithDefault = Key("dne_default", stringConverter,"defaultValue");
-    Key<Integer?> dneIntKey = Key("dne.int", integerConverter,5);
+    Key<String> doesntExistKeyWithDefault = Key{key="dne_default";converter=stringConverter;defaultValue = "defaultValue";};
+    Key<Integer?> dneIntKey = Key{key="dne.int";converter=integerConverter;defaultValue=5;};
+    
     value configService = BasicConfigurationService({ key.key->str });
     assertEquals(configService.getValue(key),str);
     
@@ -90,5 +99,107 @@ class ConfigurationServiceTests() {
     
     value whiteSpaceLine = parseProp(" ");
     assertEquals(null, whiteSpaceLine);
+  }
+  
+  test
+  shared void testListenToAddProperty(){
+    value configService = BasicConfigurationService();
+    variable Integer addCount = 0;
+    object listener1 satisfies Listener{
+      shared actual void onChange(String key, String? val, ChangeType changeType) {
+        if(changeType==added){
+          addCount++;
+        }
+      }
+    }
+    
+    configService.subscribe(listener1);
+    configService.reload({ "key"->"value" });    
+    assertEquals(addCount, 1);
+    
+    configService.unsubscribe(listener1);
+    assertEquals(addCount, 1);
+  }
+  
+  test
+  shared void testListenToChangeProperty(){
+    value configService = BasicConfigurationService();
+    variable Integer changeCount = 0;
+    object listener1 satisfies Listener{
+      shared actual void onChange(String key, String? val, ChangeType changeType) {
+        if(changeType==changed){
+          changeCount++;
+        }
+      }
+    }
+    
+    configService.subscribe(listener1);
+    configService.reload({ "key"->"value" });    
+    assertEquals(changeCount, 0);
+    
+    configService.reload({ "key"->"value_changed" });    
+    assertEquals(changeCount, 1);
+    
+    configService.unsubscribe(listener1);
+    configService.reload({ "key"->"value_changed_again" });    
+    assertEquals(changeCount, 1);
+  }
+  
+  test
+  shared void testListenToRemovedProperty(){
+    value configService = BasicConfigurationService({ "key"->"value" });
+    variable Integer removedCount = 0;
+    object listener1 satisfies Listener{
+      shared actual void onChange(String key, String? val, ChangeType changeType) {
+        if(changeType==removed){
+          removedCount++;
+        }
+      }
+    }
+    
+    configService.subscribe(listener1);
+    configService.reload({ "key"->"value" });    
+    assertEquals(removedCount, 0);
+    
+    configService.reload({});    
+    assertEquals(removedCount, 1);
+    
+    configService.unsubscribe(listener1);
+    configService.reload({ "key"->"value_changed_again" });    
+    assertEquals(removedCount, 1);
+  }
+  
+  test
+  shared void testMultiListeners(){
+    value configService = BasicConfigurationService({ "key"->"value" });
+    value actualEvents = ArrayList<[String, String,String?,ChangeType]>();
+    
+    class TestListener(String name,ChangeType listenedTo) satisfies Listener{
+      shared actual void onChange(String key, String? val, ChangeType changeType) {
+        if(changeType==listenedTo){
+          actualEvents.add([name,key,val,changeType]);
+        }
+      }
+    }
+    
+    configService.subscribe(TestListener("alistener",added));
+    configService.subscribe(TestListener("rlistener",removed));
+    configService.subscribe(TestListener("clistener",changed));
+    configService.reload({ "key"->"value" });    
+    assertEquals(actualEvents.size,0);
+    
+    configService.reload({}); 
+    assertEquals(actualEvents.size,1);
+    assertEquals(actualEvents[0]?.first,"rlistener");
+    
+    actualEvents.clear();
+    configService.reload({"key"->"value"});
+    assertEquals(actualEvents.size,1);
+    assertEquals(actualEvents[0]?.first,"alistener");
+    
+    actualEvents.clear();
+    configService.reload({"key"->"value1"});
+    assertEquals(actualEvents.size,1);
+    assertEquals(actualEvents[0]?.first,"clistener");
   }
 }

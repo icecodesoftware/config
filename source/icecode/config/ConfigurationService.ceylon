@@ -1,5 +1,7 @@
 import ceylon.collection {
-  TreeMap
+  HashSet,
+  HashMap,
+  ArrayList
 }
 import ceylon.file {
   Path,
@@ -27,17 +29,27 @@ shared interface ConfigurationService {
   doc("get a value using a Key")
   shared formal T? getValue<T>(Key<T> key);
   
+  doc("add a Listener that can listen to property changes on reload")
+  shared formal void subscribe(Listener listener);
+  
+  doc("unsubscribe a user from listening to property changes")
+  shared formal void unsubscribe(Listener listener);
+  
+  doc("Change the property with the ones passed in")
+  shared formal void reload({<String->String>*} entries);
+  
   doc ("take a snapshot of the properties in the config service")
   shared formal Map<String,String> getSnapshot();
 }
 
 shared class BasicConfigurationService({<String->String>*} entries = {}) satisfies ConfigurationService {
-  value map = TreeMap<String,String>((String x, String y) => x <=> y, entries);
   
+  variable HashMap<String,String> currentProps = HashMap<String,String>{entries = entries;};
+  value listeners = HashSet<Listener>();
   value propertyConverters = {stringConverter,integerConverter,dateTimeConverter};
   
   shared actual T? getValueAs<T>(String key) {
-    value mval = map[key];
+    value mval = currentProps[key];
     if (exists mval) {
       for (value converter in propertyConverters) {
         if (is T val = converter.convert(mval)) {
@@ -47,16 +59,53 @@ shared class BasicConfigurationService({<String->String>*} entries = {}) satisfi
     }
     return null;
   }
-  shared actual Map<String,String> getSnapshot() => map.clone();
+  shared actual Map<String,String> getSnapshot() => currentProps.clone();
   
   shared actual T? getValue<T>(Key<T> key){
-    value val = map[key.key];
+    value val = currentProps[key.key];
     if(exists val){
       return key.converter.convert(val);
     }
     return key.defaultValue;
   }
   
+  shared actual void subscribe(Listener listener) {
+    listeners.add(listener);
+  }
+  shared actual void unsubscribe(Listener listener) {
+    listeners.remove(listener);
+  }
+  
+  //TODO #9 make  this thread safe
+  shared actual void reload({<String->String>*} entries){
+    value map = HashMap<String,String>();
+    value events = ArrayList<[String,String?,ChangeType]>();
+    for(key->val in entries){
+      value current = currentProps[key];
+      if(exists current){
+        map[key]=val;
+        if(current != val){
+          events.add([key,val,changed]);
+        }
+      }else{
+        map[key]=val;
+        events.add([key,val,added]);
+      }      
+    }
+    
+    for(key in currentProps.keys){
+      if(!map.keys.contains(key)){
+        events.add([key,null,removed]);
+      }
+    }
+    currentProps = map;
+    for(item in events){
+      for(listener in listeners){
+        listener.onChange(item[0],item[1], item[2]);
+        log.trace("event ``item``");
+      }
+    }
+  }
 }
 
 shared ConfigurationService? createFromFile(Path path) {

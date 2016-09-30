@@ -9,8 +9,9 @@ shared PropertyConverter<Integer?> integerConverter = PropertyConverter(parseInt
 shared PropertyConverter<DateTime?> dateTimeConverter = PropertyConverter(parseDateTime);
 
 doc ("information to convert a property to the given form")
-by ("Mark Lester")
-shared class PropertyConverter<T>(Callable<T,[String]> parserFn) {
+shared class PropertyConverter<T>(
+  doc("function to parse the passed in property value")
+  Callable<T,[String]> parserFn) {
   shared T convert(String propVal) {
     return parserFn(propVal);
   }
