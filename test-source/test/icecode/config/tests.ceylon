@@ -25,7 +25,8 @@ import icecode.config {
   changed,
   removed,
   error,
-  ErrorMessage
+  ErrorMessage,
+  floatConverter
 }
 import ceylon.collection {
   ArrayList
@@ -212,7 +213,11 @@ class ConfigurationServiceTests() {
       converter = stringConverter;
       validator = (String key, String val) => if (!val.empty) then null else ErrorMessage("String is empty"); };
     value key2 = Key("key.int", integerConverter);
-    Set<Key<out Anything>> keys = set({ key1, key2 });
+    value key3 = Key {
+      key = "key.float";
+      converter = floatConverter;
+      defaultValue = 3.5;};
+    Set<Key<out Anything>> keys = set({ key1, key2, key3 });
     value configService = BasicConfigurationService({ "key"->"value" }, keys);
     value actualEvents = ArrayList<[String, String, String?, ChangeType]>();
     
@@ -230,6 +235,7 @@ class ConfigurationServiceTests() {
     assertEquals(actualEvents.size, 0);
     assertEquals(configService.getValue(key1), "value");
     assertNull(configService.getValue(key2));
+    assertEquals(configService.getValue(key3), 3.5);
     
     configService.reload({ "key"->"" });
     assertEquals(actualEvents.size, 1);
