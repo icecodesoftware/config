@@ -23,7 +23,9 @@ import icecode.config {
   ChangeType,
   added,
   changed,
-  removed
+  removed,
+  error,
+  ErrorMessage
 }
 import ceylon.collection {
   ArrayList
@@ -53,21 +55,21 @@ class ConfigurationServiceTests() {
   }
   
   test
-  shared void testGetWithKey(){
+  shared void testGetWithKey() {
     value str = "astring";
     Key<String> key = Key("name", stringConverter);
     Key<String> doesntExistKey = Key("dne", stringConverter);
-    Key<String> doesntExistKeyWithDefault = Key{key="dne_default";converter=stringConverter;defaultValue = "defaultValue";};
-    Key<Integer?> dneIntKey = Key{key="dne.int";converter=integerConverter;defaultValue=5;};
+    Key<String> doesntExistKeyWithDefault = Key { key = "dne_default"; converter = stringConverter; defaultValue = "defaultValue"; };
+    Key<Integer?> dneIntKey = Key { key = "dne.int"; converter = integerConverter; defaultValue = 5; };
     
     value configService = BasicConfigurationService({ key.key->str });
-    assertEquals(configService.getValue(key),str);
+    assertEquals(configService.getValue(key), str);
     
     assertNull(configService.getValue(doesntExistKey));
     
-    assertEquals(configService.getValue(doesntExistKeyWithDefault),"defaultValue");
+    assertEquals(configService.getValue(doesntExistKeyWithDefault), "defaultValue");
     
-    assertEquals(configService.getValue(dneIntKey),5);
+    assertEquals(configService.getValue(dneIntKey), 5);
   }
   
   test
@@ -102,19 +104,19 @@ class ConfigurationServiceTests() {
   }
   
   test
-  shared void testListenToAddProperty(){
+  shared void testListenToAddProperty() {
     value configService = BasicConfigurationService();
     variable Integer addCount = 0;
-    object listener1 satisfies Listener{
+    object listener1 satisfies Listener {
       shared actual void onChange(String key, String? val, ChangeType changeType) {
-        if(changeType==added){
+        if (changeType == added) {
           addCount++;
         }
       }
     }
     
     configService.subscribe(listener1);
-    configService.reload({ "key"->"value" });    
+    configService.reload({ "key"->"value" });
     assertEquals(addCount, 1);
     
     configService.unsubscribe(listener1);
@@ -122,84 +124,123 @@ class ConfigurationServiceTests() {
   }
   
   test
-  shared void testListenToChangeProperty(){
+  shared void testListenToChangeProperty() {
     value configService = BasicConfigurationService();
     variable Integer changeCount = 0;
-    object listener1 satisfies Listener{
+    object listener1 satisfies Listener {
       shared actual void onChange(String key, String? val, ChangeType changeType) {
-        if(changeType==changed){
+        if (changeType == changed) {
           changeCount++;
         }
       }
     }
     
     configService.subscribe(listener1);
-    configService.reload({ "key"->"value" });    
+    configService.reload({ "key"->"value" });
     assertEquals(changeCount, 0);
     
-    configService.reload({ "key"->"value_changed" });    
+    configService.reload({ "key"->"value_changed" });
     assertEquals(changeCount, 1);
     
     configService.unsubscribe(listener1);
-    configService.reload({ "key"->"value_changed_again" });    
+    configService.reload({ "key"->"value_changed_again" });
     assertEquals(changeCount, 1);
   }
   
   test
-  shared void testListenToRemovedProperty(){
+  shared void testListenToRemovedProperty() {
     value configService = BasicConfigurationService({ "key"->"value" });
     variable Integer removedCount = 0;
-    object listener1 satisfies Listener{
+    object listener1 satisfies Listener {
       shared actual void onChange(String key, String? val, ChangeType changeType) {
-        if(changeType==removed){
+        if (changeType == removed) {
           removedCount++;
         }
       }
     }
     
     configService.subscribe(listener1);
-    configService.reload({ "key"->"value" });    
+    configService.reload({ "key"->"value" });
     assertEquals(removedCount, 0);
     
-    configService.reload({});    
+    configService.reload({});
     assertEquals(removedCount, 1);
     
     configService.unsubscribe(listener1);
-    configService.reload({ "key"->"value_changed_again" });    
+    configService.reload({ "key"->"value_changed_again" });
     assertEquals(removedCount, 1);
   }
   
   test
-  shared void testMultiListeners(){
+  shared void testMultiListeners() {
     value configService = BasicConfigurationService({ "key"->"value" });
-    value actualEvents = ArrayList<[String, String,String?,ChangeType]>();
+    value actualEvents = ArrayList<[String, String, String?, ChangeType]>();
     
-    class TestListener(String name,ChangeType listenedTo) satisfies Listener{
+    class TestListener(String name, ChangeType listenedTo) satisfies Listener {
       shared actual void onChange(String key, String? val, ChangeType changeType) {
-        if(changeType==listenedTo){
-          actualEvents.add([name,key,val,changeType]);
+        if (changeType == listenedTo) {
+          actualEvents.add([name, key, val, changeType]);
         }
       }
     }
     
-    configService.subscribe(TestListener("alistener",added));
-    configService.subscribe(TestListener("rlistener",removed));
-    configService.subscribe(TestListener("clistener",changed));
-    configService.reload({ "key"->"value" });    
-    assertEquals(actualEvents.size,0);
+    configService.subscribe(TestListener("alistener", added));
+    configService.subscribe(TestListener("rlistener", removed));
+    configService.subscribe(TestListener("clistener", changed));
+    configService.reload({ "key"->"value" });
+    assertEquals(actualEvents.size, 0);
     
-    configService.reload({}); 
-    assertEquals(actualEvents.size,1);
-    assertEquals(actualEvents[0]?.first,"rlistener");
-    
-    actualEvents.clear();
-    configService.reload({"key"->"value"});
-    assertEquals(actualEvents.size,1);
-    assertEquals(actualEvents[0]?.first,"alistener");
+    configService.reload({});
+    assertEquals(actualEvents.size, 1);
+    assertEquals(actualEvents[0]?.first, "rlistener");
     
     actualEvents.clear();
-    configService.reload({"key"->"value1"});
-    assertEquals(actualEvents.size,1);
-    assertEquals(actualEvents[0]?.first,"clistener");
+    configService.reload({ "key"->"value" });
+    assertEquals(actualEvents.size, 1);
+    assertEquals(actualEvents[0]?.first, "alistener");
+    
+    actualEvents.clear();
+    configService.reload({ "key"->"value1" });
+    assertEquals(actualEvents.size, 1);
+    assertEquals(actualEvents[0]?.first, "clistener");
+  }
+  
+  test
+  shared void testValidation() {
+    value key1 = Key {
+      key = "key";
+      converter = stringConverter;
+      validator = (String key, String val) => if (!val.empty) then null else ErrorMessage("String is empty"); };
+    value key2 = Key("key.int", integerConverter);
+    Set<Key<out Anything>> keys = set({ key1, key2 });
+    value configService = BasicConfigurationService({ "key"->"value" }, keys);
+    value actualEvents = ArrayList<[String, String, String?, ChangeType]>();
+    
+    class TestListener(String name, ChangeType listenedTo) satisfies Listener {
+      shared actual void onChange(String key, String? val, ChangeType changeType) {
+        if (changeType == listenedTo) {
+          actualEvents.add([name, key, val, changeType]);
+        }
+      }
+    }
+    
+    configService.subscribe(TestListener("clistener", error));
+    
+    configService.reload({ "key"->"value" });
+    assertEquals(actualEvents.size, 0);
+    assertEquals(configService.getValue(key1), "value");
+    assertNull(configService.getValue(key2));
+    
+    configService.reload({ "key"->"" });
+    assertEquals(actualEvents.size, 1);
+    actualEvents.clear();
+   
+    configService.reload({ "key"->"value", "key.int"->"5" });
+    assertEquals(configService.getValue(key1), "value");
+    assertEquals(configService.getValue(key2), 5);
+    
+    configService.reload({ "key"->"value", "key.int"->"NotNumber" });
+    assertNull(configService.getValue(key2));
+    assertEquals(actualEvents.size, 1);
   }
 }
