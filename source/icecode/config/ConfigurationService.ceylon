@@ -42,9 +42,18 @@ shared interface ConfigurationService {
   shared formal Map<String,String> getSnapshot();
 }
 
-shared class BasicConfigurationService({<String->String>*} entries = {}) satisfies ConfigurationService {
+shared class BasicConfigurationService(
+  doc("Then entries used to populate the configuration service")
+  {<String->String>*} entries = {},
+  doc("The keys used for validation of the [[entries]]")
+  Set<Key<out Anything>> keys= emptySet) satisfies ConfigurationService {
   
+  /*
+   This needs to be variable because for reloads
+   */
   variable HashMap<String,String> currentProps = HashMap<String,String>{entries = entries;};
+  
+  value keySet = HashSet{elements=keys;};
   value listeners = HashSet<Listener>();
   value propertyConverters = {stringConverter,integerConverter,dateTimeConverter};
   
@@ -77,19 +86,28 @@ shared class BasicConfigurationService({<String->String>*} entries = {}) satisfi
   }
   
   //TODO #9 make  this thread safe
-  shared actual void reload({<String->String>*} entries){
+  shared actual void reload({<String->String>*} newEntries){
     value map = HashMap<String,String>();
     value events = ArrayList<[String,String?,ChangeType]>();
-    for(key->val in entries){
-      value current = currentProps[key];
+    for(newKey->newVal in newEntries){
+      Key<out Anything>? keyInfo = keySet.filter((k)=>k.key.equals(newKey)).first;
+      value current = currentProps[newKey];
+      if(exists keyInfo){
+        value errorMsg = keyInfo.validate(newVal);
+        if(exists errorMsg){
+          log.error("Could not set new property reason:"+errorMsg.message);
+          events.add([newKey,newVal,error]);
+          continue;
+        }
+      }
       if(exists current){
-        map[key]=val;
-        if(current != val){
-          events.add([key,val,changed]);
+        map[newKey]=newVal;
+        if(current != newVal){
+          events.add([newKey,newVal,changed]);
         }
       }else{
-        map[key]=val;
-        events.add([key,val,added]);
+        map[newKey]=newVal;
+        events.add([newKey,newVal,added]);
       }      
     }
     
