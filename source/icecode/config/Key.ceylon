@@ -1,7 +1,7 @@
 doc ("A way to retrieve, validate, and have default values from configuration")
 shared class Key<T>(
   doc("the key to search for")
-  shared String key,
+  shared String keyName,
   
   doc("the converter used to convert a String to the given Type")
   shared PropertyConverter<T> converter,
@@ -18,7 +18,7 @@ shared class Key<T>(
 ) {
   
   shared ErrorMessage? validate(String prop){
-   return validator(key,converter.convert(prop));
+   return validator(keyName,converter.convert(prop));
   }
 }
 

@@ -46,7 +46,7 @@ shared class BasicConfigurationService(
   doc("Then entries used to populate the configuration service")
   {<String->String>*} entries = {},
   doc("The keys used for validation of the [[entries]]")
-  Set<Key<out Anything>> keys= emptySet) satisfies ConfigurationService {
+  {Key<out Anything>*} keys= emptySet) satisfies ConfigurationService {
   
   /*
    This needs to be variable because for reloads
@@ -71,7 +71,7 @@ shared class BasicConfigurationService(
   shared actual Map<String,String> getSnapshot() => currentProps.clone();
   
   shared actual T? getValue<T>(Key<T> key){
-    value val = currentProps[key.key];
+    value val = currentProps[key.keyName];
     if(exists val){
       return key.converter.convert(val);
     }
@@ -90,7 +90,7 @@ shared class BasicConfigurationService(
     value map = HashMap<String,String>();
     value events = ArrayList<[String,String?,ChangeType]>();
     for(newKey->newVal in newEntries){
-      Key<out Anything>? keyInfo = keySet.filter((k)=>k.key.equals(newKey)).first;
+      Key<out Anything>? keyInfo = keySet.filter((k)=>k.keyName.equals(newKey)).first;
       value current = currentProps[newKey];
       if(exists keyInfo){
         value errorMsg = keyInfo.validate(newVal);
@@ -126,12 +126,18 @@ shared class BasicConfigurationService(
   }
 }
 
-shared ConfigurationService? createFromFile(Path path) {
+doc("create a [[ConfigurationService]] from a property file")
+shared ConfigurationService? createFromFile(Path path,{Key<out Anything>*} keys={}) {
   if (is File file = path.resource) {
     value props = { for (line in lines(file)) if (exists prop = parseProp(line)) prop[0] -> prop[1] };
-    return BasicConfigurationService(props);
+    return BasicConfigurationService(props,keys);
   }
   return null;
+}
+
+doc("create a [[ConfigurationService]] from a set of key value pairs")
+shared ConfigurationService? createFromEntries({<String->String>*} entries,{Key<out Anything>*} keys={}) {
+  return BasicConfigurationService(entries,keys);
 }
 
 shared [String, String]|Null parseProp(String line) {

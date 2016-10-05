@@ -60,10 +60,10 @@ class ConfigurationServiceTests() {
     value str = "astring";
     Key<String> key = Key("name", stringConverter);
     Key<String> doesntExistKey = Key("dne", stringConverter);
-    Key<String> doesntExistKeyWithDefault = Key { key = "dne_default"; converter = stringConverter; defaultValue = "defaultValue"; };
-    Key<Integer?> dneIntKey = Key { key = "dne.int"; converter = integerConverter; defaultValue = 5; };
+    Key<String> doesntExistKeyWithDefault = Key { keyName = "dne_default"; converter = stringConverter; defaultValue = "defaultValue"; };
+    Key<Integer?> dneIntKey = Key { keyName = "dne.int"; converter = integerConverter; defaultValue = 5; };
     
-    value configService = BasicConfigurationService({ key.key->str });
+    value configService = BasicConfigurationService({ key.keyName->str });
     assertEquals(configService.getValue(key), str);
     
     assertNull(configService.getValue(doesntExistKey));
@@ -79,6 +79,7 @@ class ConfigurationServiceTests() {
     assertNotNull(config);
     if (exists config) {
       assertEquals(3, config.getSnapshot().size);
+      assertEquals(config.getValueAs<String>("a"),"1");
     }
   }
   
@@ -209,12 +210,13 @@ class ConfigurationServiceTests() {
   test
   shared void testValidation() {
     value key1 = Key {
-      key = "key";
+      keyName = "key";
       converter = stringConverter;
-      validator = (String key, String val) => if (!val.empty) then null else ErrorMessage("String is empty"); };
+      validator = (String key, String val) => if (!val.empty) then null else ErrorMessage("String is empty"); 
+    };
     value key2 = Key("key.int", integerConverter);
     value key3 = Key {
-      key = "key.float";
+      keyName = "key.float";
       converter = floatConverter;
       defaultValue = 3.5;};
     Set<Key<out Anything>> keys = set({ key1, key2, key3 });
