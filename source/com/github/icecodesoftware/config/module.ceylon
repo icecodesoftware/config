@@ -61,7 +61,7 @@
     }
    }
    }
-   configService.subscribe(listener1);
+   configService.addListener(listener1);
    configService.reload(...);
    ```
    
