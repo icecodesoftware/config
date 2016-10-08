@@ -12,7 +12,7 @@ shared PropertyConverter<DateTime?> dateTimeConverter = PropertyConverter(parseD
 shared PropertyConverter<String> stringConverter = PropertyConverter((String propVal) => propVal);
 
 
-doc ("information to convert a property to the given form")
+"class to convert a given string value to the given type T"
 shared class PropertyConverter<T>(
   doc("function to parse the passed in property value")
   Callable<T,[String]> parserFn) {

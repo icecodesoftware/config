@@ -12,7 +12,7 @@ import ceylon.time {
   DateTime
 }
 
-import icecode.config {
+import com.github.icecodesoftware.config {
   BasicConfigurationService,
   createFromFile,
   parseProp,
@@ -117,11 +117,11 @@ class ConfigurationServiceTests() {
       }
     }
     
-    configService.subscribe(listener1);
+    configService.addListener(listener1);
     configService.reload({ "key"->"value" });
     assertEquals(addCount, 1);
     
-    configService.unsubscribe(listener1);
+    configService.removeListener(listener1);
     assertEquals(addCount, 1);
   }
   
@@ -137,14 +137,14 @@ class ConfigurationServiceTests() {
       }
     }
     
-    configService.subscribe(listener1);
+    configService.addListener(listener1);
     configService.reload({ "key"->"value" });
     assertEquals(changeCount, 0);
     
     configService.reload({ "key"->"value_changed" });
     assertEquals(changeCount, 1);
     
-    configService.unsubscribe(listener1);
+    configService.removeListener(listener1);
     configService.reload({ "key"->"value_changed_again" });
     assertEquals(changeCount, 1);
   }
@@ -161,14 +161,14 @@ class ConfigurationServiceTests() {
       }
     }
     
-    configService.subscribe(listener1);
+    configService.addListener(listener1);
     configService.reload({ "key"->"value" });
     assertEquals(removedCount, 0);
     
     configService.reload({});
     assertEquals(removedCount, 1);
     
-    configService.unsubscribe(listener1);
+    configService.removeListener(listener1);
     configService.reload({ "key"->"value_changed_again" });
     assertEquals(removedCount, 1);
   }
@@ -186,9 +186,9 @@ class ConfigurationServiceTests() {
       }
     }
     
-    configService.subscribe(TestListener("alistener", added));
-    configService.subscribe(TestListener("rlistener", removed));
-    configService.subscribe(TestListener("clistener", changed));
+    configService.addListener(TestListener("alistener", added));
+    configService.addListener(TestListener("rlistener", removed));
+    configService.addListener(TestListener("clistener", changed));
     configService.reload({ "key"->"value" });
     assertEquals(actualEvents.size, 0);
     
@@ -231,7 +231,7 @@ class ConfigurationServiceTests() {
       }
     }
     
-    configService.subscribe(TestListener("clistener", error));
+    configService.addListener(TestListener("clistener", error));
     
     configService.reload({ "key"->"value" });
     assertEquals(actualEvents.size, 0);

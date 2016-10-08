@@ -16,36 +16,35 @@ import ceylon.logging {
 /**
  logger for this module
  */
+Logger log = logger(`module com.github.icecodesoftware.config`);
 
-Logger log = logger(`module icecode.config`);
-
-doc ("A service for getting properties from a backing source.")
-by ("Mark Lester")
+"A service for getting properties from a backing source."
 shared interface ConfigurationService {
   
-  doc ("get a value from the config service with the given type")
+  "get a value from the config service with the given type"
   shared formal T? getValueAs<T>(String key);
   
-  doc("get a value using a Key")
+  "get a value using a Key"
   shared formal T? getValue<T>(Key<T> key);
   
-  doc("add a Listener that can listen to property changes on reload")
-  shared formal void subscribe(Listener listener);
+  "add a Listener that can listen to property changes on reload"
+  shared formal void addListener(Listener listener);
   
-  doc("unsubscribe a user from listening to property changes")
-  shared formal void unsubscribe(Listener listener);
+  "unsubscribe a user from listening to property changes"
+  shared formal void removeListener(Listener listener);
   
-  doc("Change the property with the ones passed in")
+  "Change the property with the ones passed in"
   shared formal void reload({<String->String>*} entries);
   
-  doc ("take a snapshot of the properties in the config service")
+  "take a snapshot of the properties in the config service"
   shared formal Map<String,String> getSnapshot();
 }
 
+"Implementation of the [[ConfigurationService]]"
 shared class BasicConfigurationService(
-  doc("Then entries used to populate the configuration service")
+  "Then entries used to populate the configuration service"
   {<String->String>*} entries = {},
-  doc("The keys used for validation of the [[entries]]")
+  "The keys used for validation of the [[entries]]"
   {Key<out Anything>*} keys= emptySet) satisfies ConfigurationService {
   
   /*
@@ -78,10 +77,10 @@ shared class BasicConfigurationService(
     return key.defaultValue;
   }
   
-  shared actual void subscribe(Listener listener) {
+  shared actual void addListener(Listener listener) {
     listeners.add(listener);
   }
-  shared actual void unsubscribe(Listener listener) {
+  shared actual void removeListener(Listener listener) {
     listeners.remove(listener);
   }
   
@@ -126,7 +125,7 @@ shared class BasicConfigurationService(
   }
 }
 
-doc("create a [[ConfigurationService]] from a property file")
+"create a [[ConfigurationService]] from a property file"
 shared ConfigurationService? createFromFile(Path path,{Key<out Anything>*} keys={}) {
   if (is File file = path.resource) {
     value props = { for (line in lines(file)) if (exists prop = parseProp(line)) prop[0] -> prop[1] };
@@ -135,7 +134,7 @@ shared ConfigurationService? createFromFile(Path path,{Key<out Anything>*} keys=
   return null;
 }
 
-doc("create a [[ConfigurationService]] from a set of key value pairs")
+"create a [[ConfigurationService]] from a set of key value pairs"
 shared ConfigurationService? createFromEntries({<String->String>*} entries,{Key<out Anything>*} keys={}) {
   return BasicConfigurationService(entries,keys);
 }
