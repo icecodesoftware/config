@@ -76,9 +76,9 @@
    * if validation failed on reloading a given property
 """
 native ("jvm") 
-module com.github.icecodesoftware.config "1.0.0" {
-  shared import ceylon.file "1.3.0";
-  import ceylon.logging "1.3.0";
-  import ceylon.collection "1.3.0";
-  shared import ceylon.time "1.3.0";
+module com.github.icecodesoftware.config "1.1.0" {
+  shared import ceylon.file "1.3.3";
+  import ceylon.logging "1.3.3";
+  import ceylon.collection "1.3.3";
+  shared import ceylon.time "1.3.3";
 }
