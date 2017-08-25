@@ -78,7 +78,7 @@ class ConfigurationServiceTests() {
     value config = createFromFile(parsePath("resource/test.properties"));
     assertNotNull(config);
     if (exists config) {
-      assertEquals(3, config.getSnapshot().size);
+      assertEquals(config.getSnapshot().size,3);
       assertEquals(config.getValueAs<String>("a"),"1");
     }
   }
@@ -91,18 +91,22 @@ class ConfigurationServiceTests() {
     
     //test empty string on empty value
     value novalue = parseProp("b=");
-    assertEquals(["b", ""], novalue);
+    assertEquals(novalue,["b", ""]);
+    //test missing key
+    value nosplit = parseProp("a");
+    assertEquals(nosplit,null);
     
     //test missing key
+    
     value nokey = parseProp("=3");
-    assertEquals(null, nokey);
+    assertEquals(nokey,null);
     
     //test multiple tokens in line
     value valueWithToken = parseProp("a=3=");
     assertEquals(["a", "3="], valueWithToken);
     
     value whiteSpaceLine = parseProp(" ");
-    assertEquals(null, whiteSpaceLine);
+    assertEquals(whiteSpaceLine,null);
   }
   
   test
