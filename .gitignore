@@ -1,3 +1,13 @@
-/.exploded/
-/classes/
-/modules/
+.settings
+modules
+test-modules
+JDTClasses
+classes
+build
+.exploded
+reports
+*~
+.idea/libraries
+.idea/dictionaries
+.idea/workspace.xml
+.DS_Store
